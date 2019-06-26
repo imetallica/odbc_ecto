@@ -17,16 +17,24 @@ defmodule OdbcEcto.Connection.ODBC do
   end
 
   def query(pid, %OdbcEcto.Query{statement: statement} = query) do
-    case GenServer.call(pid, {:query, statement}, :infinity) do
-      {:ok, result} -> {:ok, query, result}
-      {:error, reason} -> {:error, reason}
+    if Process.alive?(pid) do
+      case GenServer.call(pid, {:query, statement}, :infinity) do
+        {:ok, result} -> {:ok, query, result}
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      {:error, "disconnected"}
     end
   end
 
   def query(pid, %OdbcEcto.Query{statement: statement} = query, params) do
-    case GenServer.call(pid, {:query, statement, params}, :infinity) do
-      {:ok, result} -> {:ok, query, result}
-      {:error, reason} -> {:error, reason}
+    if Process.alive?(pid) do
+      case GenServer.call(pid, {:query, statement, params}, :infinity) do
+        {:ok, result} -> {:ok, query, result}
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      {:error, "disconnected"}
     end
   end
 
@@ -34,7 +42,11 @@ defmodule OdbcEcto.Connection.ODBC do
     conn_str = Keyword.get(opts, :conn_str, "")
     timeout = Keyword.get(opts, :timeout, 5000)
 
-    case :odbc.connect(to_charlist(conn_str), timeout: timeout, binary_strings: :on) do
+    case :odbc.connect(to_charlist(conn_str),
+           timeout: timeout,
+           binary_strings: :on,
+           extended_errors: :on
+         ) do
       {:ok, ref} ->
         {:ok, %__MODULE__{conn: ref}}
 
@@ -68,6 +80,14 @@ defmodule OdbcEcto.Connection.ODBC do
 
       {:updated, rows} ->
         {:reply, {:ok, %OdbcEcto.Result{rows: rows}}, state}
+
+      {:error, {odbc_error_code, native_error_code, reason}} ->
+        {:reply,
+         {:error,
+          %Error{
+            message:
+              "[ODBC: #{odbc_error_code}] [NATIVE: #{native_error_code}] #{to_string(reason)}"
+          }, state}}
     end
   end
 

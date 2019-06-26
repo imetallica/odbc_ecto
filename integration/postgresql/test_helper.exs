@@ -20,7 +20,9 @@ Application.put_env(
   :ecto,
   TestRepo,
   adapter: OdbcEcto.Adapter.Postgres,
-  conn_str: System.get_env("TEST_CONN_STR"),
+  conn_str:
+    System.get_env("TEST_CONN_STR") ||
+      "DRIVER={PostgreSQL UNICODE};UID=postgres;PWD=postgres;SERVER=localhost;PORT=5432;DATABASE=test_db",
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: pool
 )
@@ -32,7 +34,9 @@ Application.put_env(
   PoolRepo,
   adapter: OdbcEcto.Adapter.Postgres,
   pool: pool,
-  conn_str: System.get_env("POOL_CONN_STR"),
+  conn_str:
+    System.get_env("POOL_CONN_STR") ||
+      "DRIVER={PostgreSQL UNICODE};UID=postgres;PWD=postgres;SERVER=localhost;PORT=5432;DATABASE=pool_db",
   pool_size: 10,
   max_restarts: 20,
   max_seconds: 10
@@ -74,8 +78,11 @@ Code.require_file("./support/migration.exs", __DIR__)
 {:ok, _} = OdbcEcto.Adapter.Postgres.ensure_all_started(TestRepo, :temporary)
 
 # Load up the repository, start it, and run migrations
-_ = OdbcEcto.Adapter.Postgres.storage_down(TestRepo.config())
-:ok = OdbcEcto.Adapter.Postgres.storage_up(TestRepo.config())
+Application.put_env(:odbc_ecto, :ecto_repos, [TestRepo])
+_ = Mix.Tasks.Ecto.Drop.run([])
+_ = Mix.Tasks.Ecto.Create.run("")
+# _ = OdbcEcto.Adapter.Postgres.storage_down(TestRepo.config())
+# :ok = OdbcEcto.Adapter.Postgres.storage_up(TestRepo.config())
 
 {:ok, _pid} = TestRepo.start_link()
 {:ok, _pid} = PoolRepo.start_link()

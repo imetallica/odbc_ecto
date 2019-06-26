@@ -3,7 +3,11 @@ defmodule OdbcEcto.Adapter.Postgres.Connection do
 
   @impl true
   def child_spec(options) do
-    OdbcEcto.child_spec(options)
+    DBConnection.child_spec(OdbcEcto.Connection, options)
+  end
+
+  def stream(_, _, _, _) do
+    raise "not implemented"
   end
 
   @impl true

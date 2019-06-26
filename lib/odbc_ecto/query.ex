@@ -10,4 +10,10 @@ defmodule OdbcEcto.Query do
 
     def decode(_query, result, _opts), do: result
   end
+
+  defimpl String.Chars do
+    def to_string(%{statement: statement}) do
+      IO.iodata_to_binary(statement)
+    end
+  end
 end

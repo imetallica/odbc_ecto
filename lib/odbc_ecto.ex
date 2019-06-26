@@ -7,12 +7,10 @@ defmodule OdbcEcto do
   Starts the OdbcEcto connection.
   """
   def start_link(opts) do
-    DBConnection.start_link(OdbcEcto.Connection, opts)
+    DBConnection.start_link(OdbcEcto.Connection, opts) |> IO.inspect(label: "1")
   end
 
-  def prepare_execute(conn, name, statement, params, opts) do
-    IO.inspect(name, label: "NAME")
-
+  def prepare_execute(conn, _name, statement, params \\ [], opts \\ []) do
     query = %OdbcEcto.Query{statement: statement}
     DBConnection.prepare_execute(conn, query, params, opts)
   end
